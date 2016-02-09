@@ -21,6 +21,8 @@ var sessions = {};
 var apiRe = new RegExp('^/api(/.*$)');
 var kernelIdRe = new RegExp('^.*/kernels/([^/]*)');
 
+var WebSocket = require('ws');
+
 var proxy = httpProxy.createProxyServer({
         target: urljoin(kgUrl, kgBaseUrl, '/api'),
         changeOrigin: true,
@@ -78,17 +80,35 @@ function setupWSProxy(_server) {
     debug('setting up WebSocket proxy');
     server = _server;
 
+    var WebSocketServer = require('ws').Server
+      , wss = new WebSocketServer({ server: server });
+
+    wss.on('connection', function connection(ws) {
+        var location = url.parse(ws.upgradeReq.url, true);
+        console.log("Location = " + location);
+        console.log("ws upgradeReq = " + ws.upgradeReq);
+        console.log("ws upgradeReq url = " + ws.upgradeReq.url);
+        console.log("ws socket  = " + ws.socket);
+      ws.on('message', function incoming(message) {
+        console.log('Received message = ', message);
+      });
+        //proxy.ws(req, ws);
+        //proxy.ws(req, socket, head);
+    });
+    /*
     // Listen to the `upgrade` event and proxy the WebSocket requests as well.
     _server.on('upgrade', function(req, socket, head) {
+        console.log("upgrade url = " + req.url);
         var _emit = socket.emit;
         socket.emit = function(eventName, data) {
-
+            console.log("eventName = " + eventName);
             // Handle TCP data
             if (eventName === 'data') {
                 var codeCellsSubstituted = data;
                 // Decode one or more websocket frames
+                //console.log("DATA to decode = " + data);
                 var decodedData = wsutils.decodeWebSocket(data);
-
+                console.log("DATA decoded = " + decodedData.toString());
                 if(!decodedData.length) {
                     // HACK / TODO: Pass through anything that comes in by
                     // itself that we don't know how to decode as text data.
@@ -139,6 +159,7 @@ function setupWSProxy(_server) {
         req.url = apiRe.exec(req.url)[1];
         proxy.ws(req, socket, head);
     });
+    */
 }
 
 // Kill kernel on backend kernel gateway.
@@ -169,6 +190,8 @@ var proxyRoute = function(req, res, next) {
     proxy.web(req, res);
 
     if (!server) {
+        console.log("SETTING WS PROXY");
+        console.log("proxy url = " + req.url);
         setupWSProxy(req.connection.server);
     }
 };

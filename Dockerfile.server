@@ -26,7 +26,7 @@ RUN cd ext && \
 # npm & bower install separately, so these are properly cached by docker and not affected by
 # changes in rest of source
 ADD package.json package.json
-RUN npm install --quiet
+RUN npm install
 
 ADD bower.json bower.json
 RUN npm run bower
